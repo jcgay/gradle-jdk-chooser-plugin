@@ -10,6 +10,16 @@ repositories {
 	mavenCentral()
 }
 
+val intTest = sourceSets.create("intTest") {
+   compileClasspath += sourceSets.main.get().output
+   runtimeClasspath += sourceSets.main.get().output
+}
+
+val intTestImplementation by configurations.getting {
+   extendsFrom(configurations.testImplementation.get())
+}
+configurations["intTestRuntimeOnly"].extendsFrom(configurations.testRuntimeOnly.get())
+
 dependencies {
    implementation(gradleApi())
    implementation(kotlin("stdlib-jdk8"))
@@ -19,6 +29,10 @@ dependencies {
    testImplementation("org.junit.jupiter:junit-jupiter-params")
    testImplementation("org.assertj:assertj-core:3.14.0")
    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+
+   intTestImplementation("com.squareup.okhttp3:okhttp:4.3.1")
+   intTestImplementation("org.apache.commons:commons-lang3:3.9")
+   intTestImplementation("org.rauschig:jarchivelib:1.0.0")
 }
 
 java {
@@ -36,16 +50,8 @@ gradlePlugin {
    }
 }
 
-val intTest = sourceSets.create("intTest") {
-   compileClasspath += sourceSets.main.get().output
-   runtimeClasspath += sourceSets.main.get().output
-}
-
-configurations["intTestImplementation"].extendsFrom(configurations.testImplementation.get())
-configurations["intTestRuntimeOnly"].extendsFrom(configurations.testRuntimeOnly.get())
-
 tasks {
-   test {
+   withType(Test::class) {
       useJUnitPlatform()
    }
 
