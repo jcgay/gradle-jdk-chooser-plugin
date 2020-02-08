@@ -6,9 +6,12 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
+import java.util.ServiceLoader
 
 
 class JdkChooserPlugin: Plugin<Project> {
+
+    val jdkProviders = ServiceLoader.load(JdkProvider::class.java)
 
     override fun apply(project: Project) {
         project.afterEvaluate {
@@ -52,5 +55,7 @@ class JdkChooserPlugin: Plugin<Project> {
     }
 
     private fun getInstallation(project: Project, expectedJavaVersion: JavaVersion): String =
-            project.property("installation.jdk.${expectedJavaVersion.majorVersion}").toString()
+            jdkProviders.map { it.findInstallation(expectedJavaVersion, project) }
+                    .firstOrNull { it != null }.toString()
+
 }
