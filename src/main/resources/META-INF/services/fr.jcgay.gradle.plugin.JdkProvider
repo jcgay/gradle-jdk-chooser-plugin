@@ -1,1 +1,2 @@
 fr.jcgay.gradle.plugin.provider.GradlePropertyJdkProvider
+fr.jcgay.gradle.plugin.provider.JenvJdkProvider
