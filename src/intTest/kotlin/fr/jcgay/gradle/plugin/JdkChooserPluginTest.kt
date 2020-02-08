@@ -124,4 +124,58 @@ internal class JdkChooserPluginTest {
         assertThat(result.task(":compileJava")?.outcome).isEqualTo(NO_SOURCE)
     }
 
+    @Test
+    internal fun `should run with correct java`(@TempDir tempDir: Path) {
+        """
+            org.gradle.java.home=${jdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
+            installation.jdk.11=${jdks.getInstallation(VERSION_11).toFile().canonicalPath}
+        """.trimIndent()
+                .dir(tempDir).name("gradle.properties").write()
+
+        """
+            plugins {
+                id 'java'
+                id 'fr.jcgay.gradle-jdk-chooser-plugin'
+            }
+            
+            java {
+               sourceCompatibility = JavaVersion.VERSION_11
+               targetCompatibility = JavaVersion.VERSION_11
+            }
+            
+            tasks.create("validateCurrentJdk") {
+                if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+                    throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK 8 😇"))
+                }
+            }
+            
+            tasks.compileJava.dependsOn("validateCurrentJdk")
+            
+            tasks.create("runMyClass", JavaExec) {
+              classpath = sourceSets.main.runtimeClasspath
+
+              main = 'MyClass'
+            }
+        """.trimIndent()
+                .dir(tempDir).name("build.gradle").write()
+
+        """
+            public class MyClass {
+                public static void main(String... args) {
+                    System.out.println(java.util.List.of("Hello", "World!"));
+                }
+            }
+        """.trimIndent()
+                .dir(tempDir).name("MyClass.java").into(MAIN_JAVA).write()
+
+        val result: BuildResult = GradleRunner.create()
+                .withProjectDir(tempDir.toFile())
+                .withGradleVersion(gradleVersion)
+                .withArguments("runMyClass")
+                .withPluginClasspath()
+                .withDebug(true)
+                .build()
+
+        assertThat(result.output).contains("[Hello, World!]")
+    }
 }
