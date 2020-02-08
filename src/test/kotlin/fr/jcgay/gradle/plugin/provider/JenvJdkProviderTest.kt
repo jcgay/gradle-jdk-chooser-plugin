@@ -14,7 +14,6 @@ import java.nio.file.Path
 
 internal class JenvJdkProviderTest {
 
-    @Test
     @RepeatedTest(10)
     internal fun `should return installation managed by jEnv`(@TempDir home: Path) {
         listOf("1.6", "1.6.0.65", "1.8", "1.8.0.232", "11.0", "11.0.5", "11.0.5.hs-adpt", "openjdk64-1.8.0.232", "openjdk64-11.0.5", "oracle64-1.6.0.65")

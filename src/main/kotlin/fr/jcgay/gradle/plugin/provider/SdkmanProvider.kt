@@ -7,9 +7,9 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
-class JenvJdkProvider(private val home: Path) : JdkProvider {
+class SdkmanProvider(private val home: Path) : JdkProvider {
 
-    constructor(): this(File("${System.getProperty("user.home")}/.jenv/versions").toPath())
+    constructor(): this(File("${System.getProperty("user.home")}/.sdkman/candidates/java").toPath())
 
     override fun findInstallation(version: JavaVersion, project: Project): Path? {
         if (!Files.exists(home)) {
@@ -17,7 +17,8 @@ class JenvJdkProvider(private val home: Path) : JdkProvider {
         }
 
         return Files.list(home)
-                .sorted()
+                .filter { it.fileName.toString() != "current" }
+                .sorted(reverseOrder())
                 .filter { JavaVersion.toVersion(it.fileName) == version }
                 .findFirst()
                 .orElse(null)
