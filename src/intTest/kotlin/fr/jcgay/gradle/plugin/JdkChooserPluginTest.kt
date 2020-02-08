@@ -1,6 +1,7 @@
 package fr.jcgay.gradle.plugin
 
 import fr.jcgay.gradle.plugin.dsl.SourceCategory.MAIN_JAVA
+import fr.jcgay.gradle.plugin.dsl.SourceCategory.UNIT_TEST_JAVA
 import fr.jcgay.gradle.plugin.dsl.dir
 import fr.jcgay.gradle.plugin.jdk.JdkProvider
 import org.assertj.core.api.Assertions.assertThat
@@ -173,9 +174,71 @@ internal class JdkChooserPluginTest {
                 .withGradleVersion(gradleVersion)
                 .withArguments("runMyClass")
                 .withPluginClasspath()
-                .withDebug(true)
                 .build()
 
         assertThat(result.output).contains("[Hello, World!]")
     }
+
+    @Test
+    internal fun `should run test with correct java`(@TempDir tempDir: Path) {
+        """
+            org.gradle.java.home=${jdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
+            installation.jdk.11=${jdks.getInstallation(VERSION_11).toFile().canonicalPath}
+        """.trimIndent()
+                .dir(tempDir).name("gradle.properties").write()
+
+        """
+            plugins {
+                id 'java'
+                id 'fr.jcgay.gradle-jdk-chooser-plugin'
+            }
+            
+            repositories {
+                mavenCentral()
+            }
+            
+            dependencies {
+                testImplementation "junit:junit:4.13"
+            }
+            
+            java {
+               sourceCompatibility = JavaVersion.VERSION_11
+               targetCompatibility = JavaVersion.VERSION_11
+            }
+            
+            tasks.create("validateCurrentJdk") {
+                if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+                    throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK 8 😇"))
+                }
+            }
+            
+            tasks.compileJava.dependsOn("validateCurrentJdk")
+            
+        """.trimIndent()
+                .dir(tempDir).name("build.gradle").write()
+
+        """
+            import org.junit.*;
+            import java.util.*;
+            
+            public class UnitTest {
+            
+                @Test
+                public void should_success() {
+                    Assert.assertEquals(List.of("1"), List.of("1"));
+                }
+            }
+        """.trimIndent()
+                .dir(tempDir).name("UnitTest.java").into(UNIT_TEST_JAVA).write()
+
+        val result: BuildResult = GradleRunner.create()
+                .withProjectDir(tempDir.toFile())
+                .withGradleVersion(gradleVersion)
+                .withArguments("test")
+                .withPluginClasspath()
+                .build()
+
+        assertThat(result.task(":test")?.outcome).isEqualTo(SUCCESS)
+    }
+
 }

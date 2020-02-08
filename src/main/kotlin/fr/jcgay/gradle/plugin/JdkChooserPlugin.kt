@@ -5,6 +5,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.testing.Test
 
 
 class JdkChooserPlugin: Plugin<Project> {
@@ -22,9 +23,15 @@ class JdkChooserPlugin: Plugin<Project> {
                 }
 
                 val expectedJavaVersion = findExpectedJavaVersion(project) ?: return@withPlugin
-                project.tasks.withType(JavaExec::class.java) { javaExecTask ->
+                project.tasks.withType(JavaExec::class.java) {
                     if (JavaVersion.current() != expectedJavaVersion) {
-                        javaExecTask.executable = "${getInstallation(project, expectedJavaVersion)}/bin/java"
+                        it.executable = "${getInstallation(project, expectedJavaVersion)}/bin/java"
+                    }
+                }
+
+                project.tasks.withType(Test::class.java) {
+                    if (JavaVersion.current() != expectedJavaVersion) {
+                        it.executable = "${getInstallation(project, expectedJavaVersion)}/bin/java"
                     }
                 }
             }
