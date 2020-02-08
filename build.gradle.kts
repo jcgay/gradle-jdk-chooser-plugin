@@ -28,6 +28,7 @@ dependencies {
    testImplementation("org.junit.jupiter:junit-jupiter-api")
    testImplementation("org.junit.jupiter:junit-jupiter-params")
    testImplementation("org.assertj:assertj-core:3.14.0")
+   testImplementation("io.mockk:mockk:1.9.3")
    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
    intTestImplementation("com.squareup.okhttp3:okhttp:4.3.1")

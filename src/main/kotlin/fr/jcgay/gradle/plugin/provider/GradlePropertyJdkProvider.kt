@@ -10,6 +10,7 @@ import java.nio.file.Path
 class GradlePropertyJdkProvider: JdkProvider {
 
     override fun findInstallation(version: JavaVersion, project: Project): Path? {
-        return File(project.property("installation.jdk.${version.majorVersion}").toString()).toPath()
+        val installation = project.findProperty("installation.jdk.${version.majorVersion}")
+        return if (installation == null) null else File(installation.toString()).toPath()
     }
 }
