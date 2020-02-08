@@ -56,13 +56,10 @@ class JdkInstaller {
     private fun download(request: Request, archiveFolder: Path): Path {
         logger.lifecycle("Downloading JDK archive in {} from {}", archiveFolder, request.url)
         client.newCall(request).execute().use { response ->
-            response.body?.byteStream()?.readBytes()?.let {
-                val archivePath = archiveFolder.resolve(getFilename(response))
-                archivePath.toFile().writeBytes(it)
-                return archivePath
-            }
+            val archivePath = archiveFolder.resolve(getFilename(response))
+            response.body?.byteStream()?.copyTo(archivePath.toFile().outputStream())
+            return archivePath
         }
-        throw RuntimeException("Failed to download ${request.url} in ${archiveFolder.toFile().canonicalPath}")
     }
 
     private fun getFilename(response: Response): String {
