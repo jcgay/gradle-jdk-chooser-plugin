@@ -30,7 +30,6 @@ class JdkInstaller {
 
         val archiveFolder = Files.createTempDirectory("jdk-${version.majorVersion}")
         archiveFolder.toFile().deleteOnExit()
-        logger.lifecycle("Downloading JDK archive in {}", archiveFolder)
 
         val archive = download(request, archiveFolder).toFile()
         val archiver = ArchiverFactory.createArchiver(archive)
@@ -55,6 +54,7 @@ class JdkInstaller {
     }
 
     private fun download(request: Request, archiveFolder: Path): Path {
+        logger.lifecycle("Downloading JDK archive in {} from {}", archiveFolder, request.url)
         client.newCall(request).execute().use { response ->
             response.body?.byteStream()?.readBytes()?.let {
                 val archivePath = archiveFolder.resolve(getFilename(response))
@@ -74,6 +74,7 @@ class JdkInstaller {
     private fun currentArchitecture(): String {
         return when (SystemUtils.OS_ARCH) {
             "x86_64" -> "x64"
+            "amd64" -> "x64"
             else -> "x32"
         }
     }
