@@ -5,6 +5,7 @@ import fr.jcgay.gradle.plugin.dsl.SourceCategory.UNIT_TEST_JAVA
 import fr.jcgay.gradle.plugin.dsl.dir
 import fr.jcgay.gradle.plugin.jdk.JdkProvider
 import org.assertj.core.api.Assertions.assertThat
+import org.gradle.api.JavaVersion
 import org.gradle.api.JavaVersion.VERSION_11
 import org.gradle.api.JavaVersion.VERSION_1_8
 import org.gradle.testkit.runner.BuildResult
@@ -39,10 +40,7 @@ internal class JdkChooserPluginTest {
                 .dir(tempDir).name("gradle.properties").write()
 
         """
-            plugins {
-                id 'java'
-                id 'fr.jcgay.gradle-jdk-chooser-plugin'
-            }
+            ${applyPlugins()}
             
             java {
                sourceCompatibility = JavaVersion.VERSION_11
@@ -51,13 +49,7 @@ internal class JdkChooserPluginTest {
             
             jdk.provider = 'GradlePropertyJdkProvider'
             
-            tasks.create("validateCurrentJdk") {
-                if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
-                    throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK 8 😇"))
-                }
-            }
-            
-            tasks.compileJava.dependsOn("validateCurrentJdk")
+            ${ensureCurrentJavaVersionIs(VERSION_1_8)}
         """.trimIndent()
                 .dir(tempDir).name("build.gradle").write()
 
@@ -89,10 +81,7 @@ internal class JdkChooserPluginTest {
                 .dir(tempDir).name("gradle.properties").write()
 
         """
-            plugins {
-                id 'java'
-                id 'fr.jcgay.gradle-jdk-chooser-plugin'
-            }
+            ${applyPlugins()}
             
             java {
                sourceCompatibility = JavaVersion.VERSION_1_8
@@ -101,13 +90,7 @@ internal class JdkChooserPluginTest {
             
             jdk.provider = 'GradlePropertyJdkProvider'
             
-            tasks.create("validateCurrentJdk") {
-                if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
-                    throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK 8 😇"))
-                }
-            }
-            
-            tasks.compileJava.dependsOn("validateCurrentJdk")
+            ${ensureCurrentJavaVersionIs(VERSION_1_8)}
             
             tasks.withType(JavaCompile) {
                 if (options.fork) {
@@ -139,10 +122,7 @@ internal class JdkChooserPluginTest {
                 .dir(tempDir).name("gradle.properties").write()
 
         """
-            plugins {
-                id 'java'
-                id 'fr.jcgay.gradle-jdk-chooser-plugin'
-            }
+            ${applyPlugins()}
             
             java {
                sourceCompatibility = JavaVersion.VERSION_11
@@ -151,13 +131,7 @@ internal class JdkChooserPluginTest {
             
             jdk.provider = 'GradlePropertyJdkProvider'
             
-            tasks.create("validateCurrentJdk") {
-                if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
-                    throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK 8 😇"))
-                }
-            }
-            
-            tasks.compileJava.dependsOn("validateCurrentJdk")
+            ${ensureCurrentJavaVersionIs(VERSION_1_8)}
             
             tasks.create("runMyClass", JavaExec) {
               classpath = sourceSets.main.runtimeClasspath
@@ -195,10 +169,7 @@ internal class JdkChooserPluginTest {
                 .dir(tempDir).name("gradle.properties").write()
 
         """
-            plugins {
-                id 'java'
-                id 'fr.jcgay.gradle-jdk-chooser-plugin'
-            }
+            ${applyPlugins()}
             
             repositories {
                 mavenCentral()
@@ -215,13 +186,7 @@ internal class JdkChooserPluginTest {
             
             jdk.provider = 'GradlePropertyJdkProvider'
             
-            tasks.create("validateCurrentJdk") {
-                if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
-                    throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK 8 😇"))
-                }
-            }
-            
-            tasks.compileJava.dependsOn("validateCurrentJdk")
+            ${ensureCurrentJavaVersionIs(VERSION_1_8)}
             
         """.trimIndent()
                 .dir(tempDir).name("build.gradle").write()
@@ -248,6 +213,27 @@ internal class JdkChooserPluginTest {
                 .build()
 
         assertThat(result.task(":test")?.outcome).isEqualTo(SUCCESS)
+    }
+
+    private fun applyPlugins(): String {
+        return """
+                plugins {
+                    id 'java'
+                    id 'fr.jcgay.gradle-jdk-chooser-plugin'
+                }
+                """
+    }
+
+    private fun ensureCurrentJavaVersionIs(version: JavaVersion): String {
+        return """
+                tasks.create("validateCurrentJdk") {
+                    if (JavaVersion.current() != JavaVersion.${version.name}) {
+                        throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK ${version.majorVersion} 😇"))
+                    }
+                }
+                
+                tasks.compileJava.dependsOn("validateCurrentJdk")
+                """
     }
 
 }

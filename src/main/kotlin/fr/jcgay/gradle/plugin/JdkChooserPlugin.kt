@@ -23,37 +23,46 @@ class JdkChooserPlugin: Plugin<Project> {
             }
 
             project.pluginManager.withPlugin("java") {
-
-                project.tasks.withType(JavaCompile::class.java) {
-                    val expectedJavaVersion = JavaVersion.toVersion(it.targetCompatibility)
-                    if (JavaVersion.current() != expectedJavaVersion) {
-                        val installation = getInstallation(project, expectedJavaVersion)
-                        project.logger.debug("{} is not the expected Java version {}. Will fork Java compilation with JDK: {}",
-                                JavaVersion.current(), expectedJavaVersion, installation)
-                        it.options.isFork = true
-                        it.options.forkOptions.javaHome = project.file(installation)
-                    }
-                }
+                configureJavaCompilation(project)
 
                 val expectedJavaVersion = findExpectedJavaVersion(project) ?: return@withPlugin
+                configureJavaExecution(project, expectedJavaVersion)
+                configureJavaTest(project, expectedJavaVersion)
+            }
+        }
+    }
 
-                project.tasks.withType(JavaExec::class.java) {
-                    if (JavaVersion.current() != expectedJavaVersion) {
-                        val matchingInstallation = getInstallation(project, expectedJavaVersion)
-                        project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
-                                JavaVersion.current(), expectedJavaVersion, matchingInstallation)
-                        it.executable = "$matchingInstallation/bin/java"
-                    }
-                }
+    private fun configureJavaTest(project: Project, expectedJavaVersion: JavaVersion) {
+        project.tasks.withType(Test::class.java) {
+            if (JavaVersion.current() != expectedJavaVersion) {
+                val matchingInstallation = getInstallation(project, expectedJavaVersion)
+                project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
+                        JavaVersion.current(), expectedJavaVersion, matchingInstallation)
+                it.executable = "$matchingInstallation/bin/java"
+            }
+        }
+    }
 
-                project.tasks.withType(Test::class.java) {
-                    if (JavaVersion.current() != expectedJavaVersion) {
-                        val matchingInstallation = getInstallation(project, expectedJavaVersion)
-                        project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
-                                JavaVersion.current(), expectedJavaVersion, matchingInstallation)
-                        it.executable = "$matchingInstallation/bin/java"
-                    }
-                }
+    private fun configureJavaExecution(project: Project, expectedJavaVersion: JavaVersion) {
+        project.tasks.withType(JavaExec::class.java) {
+            if (JavaVersion.current() != expectedJavaVersion) {
+                val matchingInstallation = getInstallation(project, expectedJavaVersion)
+                project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
+                        JavaVersion.current(), expectedJavaVersion, matchingInstallation)
+                it.executable = "$matchingInstallation/bin/java"
+            }
+        }
+    }
+
+    private fun configureJavaCompilation(project: Project) {
+        project.tasks.withType(JavaCompile::class.java) {
+            val expectedJavaVersion = JavaVersion.toVersion(it.targetCompatibility)
+            if (JavaVersion.current() != expectedJavaVersion) {
+                val installation = getInstallation(project, expectedJavaVersion)
+                project.logger.debug("{} is not the expected Java version {}. Will fork Java compilation with JDK: {}",
+                        JavaVersion.current(), expectedJavaVersion, installation)
+                it.options.isFork = true
+                it.options.forkOptions.javaHome = project.file(installation)
             }
         }
     }
