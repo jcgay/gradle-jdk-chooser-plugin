@@ -12,6 +12,7 @@ plugins {
    `java-gradle-plugin`
    `maven-publish`
    id("pl.allegro.tech.build.axion-release") version "1.11.0"
+   id("com.gradle.plugin-publish") version "0.10.1"
 }
 
 scmVersion {
@@ -60,11 +61,18 @@ java {
 gradlePlugin {
    plugins {
       create("gradleJdkChooserPlugin") {
-         id = "fr.jcgay.gradle-jdk-chooser-plugin"
+         id = "fr.jcgay.gradle-jdk-chooser"
          displayName = "JDK Chooser Plugin"
          implementationClass = "fr.jcgay.gradle.plugin.JdkChooserPlugin"
       }
    }
+}
+
+pluginBundle {
+   website = "https://github.com/jcgay/gradle-jdk-chooser-plugin"
+   vcsUrl = "https://github.com/jcgay/gradle-jdk-chooser-plugin"
+   description = "A plugin that choose a JDK and configure 'release' javac argument to build your project"
+   tags = listOf("javac --release", "jEnv", "SDKMAN!")
 }
 
 tasks {
@@ -101,7 +109,7 @@ publishing {
    publications {
       create<MavenPublication>("maven") {
          group = "fr.jcgay.gradle-jdk-chooser-plugin"
-         artifactId = "fr.jcgay.gradle-jdk-chooser-plugin.gradle.plugin"
+         artifactId = "fr.jcgay.gradle-jdk-chooser.gradle.plugin"
          from(components["java"])
       }
    }

@@ -267,7 +267,7 @@ internal class JdkChooserPluginTest {
         return """
                 plugins {
                     id 'java'
-                    id 'fr.jcgay.gradle-jdk-chooser-plugin'
+                    id 'fr.jcgay.gradle-jdk-chooser'
                 }
                 """
     }

@@ -12,7 +12,7 @@ You can rely on the `--release` option from `javac` since JDK 9.
 This plugin will try to find a JDK matching the `java.targetCompatibility` in different sources and configure tasks in your build that will need it.
 
     plugins {
-      id "fr.jcgay.gradle-jdk-chooser" version "1.0.0"
+      id "fr.jcgay.gradle-jdk-chooser" version "0.1.0"
     }
 
 # JDK Providers
