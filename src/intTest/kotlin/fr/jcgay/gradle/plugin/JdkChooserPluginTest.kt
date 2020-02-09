@@ -5,6 +5,7 @@ import fr.jcgay.gradle.plugin.dsl.SourceCategory.UNIT_TEST_JAVA
 import fr.jcgay.gradle.plugin.dsl.dir
 import fr.jcgay.gradle.plugin.jdk.JdkProvider
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.gradle.api.JavaVersion
 import org.gradle.api.JavaVersion.VERSION_11
 import org.gradle.api.JavaVersion.VERSION_1_8
@@ -25,7 +26,7 @@ internal class JdkChooserPluginTest {
 
     @JvmField
     @RegisterExtension
-    val jdks = JdkProvider()
+    val testingJdks = JdkProvider()
             .withVersion(VERSION_1_8, VERSION_11)
             .atPath(File("build").toPath())
 
@@ -34,8 +35,8 @@ internal class JdkChooserPluginTest {
     @Test
     internal fun `should use a different jdk when current runtime is not the one targeted`(@TempDir tempDir: Path) {
         """
-            org.gradle.java.home=${jdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
-            installation.jdk.11=${jdks.getInstallation(VERSION_11).toFile().canonicalPath}
+            org.gradle.java.home=${testingJdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
+            installation.jdk.11=${testingJdks.getInstallation(VERSION_11).toFile().canonicalPath}
         """.trimIndent()
                 .dir(tempDir).name("gradle.properties").write()
 
@@ -67,7 +68,6 @@ internal class JdkChooserPluginTest {
                 .withGradleVersion(gradleVersion)
                 .withArguments("compileJava")
                 .withPluginClasspath()
-                .withDebug(true)
                 .build()
 
         assertThat(result.task(":compileJava")?.outcome).isEqualTo(SUCCESS)
@@ -76,7 +76,7 @@ internal class JdkChooserPluginTest {
     @Test
     internal fun `should not fork compilation when current runtime is the one targeted`(@TempDir tempDir: Path) {
         """
-            org.gradle.java.home=${jdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
+            org.gradle.java.home=${testingJdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
         """.trimIndent()
                 .dir(tempDir).name("gradle.properties").write()
 
@@ -116,8 +116,8 @@ internal class JdkChooserPluginTest {
     @Test
     internal fun `should run with correct java`(@TempDir tempDir: Path) {
         """
-            org.gradle.java.home=${jdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
-            installation.jdk.11=${jdks.getInstallation(VERSION_11).toFile().canonicalPath}
+            org.gradle.java.home=${testingJdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
+            installation.jdk.11=${testingJdks.getInstallation(VERSION_11).toFile().canonicalPath}
         """.trimIndent()
                 .dir(tempDir).name("gradle.properties").write()
 
@@ -134,9 +134,8 @@ internal class JdkChooserPluginTest {
             ${ensureCurrentJavaVersionIs(VERSION_1_8)}
             
             tasks.create("runMyClass", JavaExec) {
-              classpath = sourceSets.main.runtimeClasspath
-
-              main = 'MyClass'
+                classpath = sourceSets.main.runtimeClasspath
+                main = 'MyClass'
             }
         """.trimIndent()
                 .dir(tempDir).name("build.gradle").write()
@@ -163,8 +162,8 @@ internal class JdkChooserPluginTest {
     @Test
     internal fun `should run test with correct java`(@TempDir tempDir: Path) {
         """
-            org.gradle.java.home=${jdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
-            installation.jdk.11=${jdks.getInstallation(VERSION_11).toFile().canonicalPath}
+            org.gradle.java.home=${testingJdks.getInstallation(VERSION_1_8).toFile().canonicalPath}
+            installation.jdk.11=${testingJdks.getInstallation(VERSION_11).toFile().canonicalPath}
         """.trimIndent()
                 .dir(tempDir).name("gradle.properties").write()
 
@@ -213,6 +212,55 @@ internal class JdkChooserPluginTest {
                 .build()
 
         assertThat(result.task(":test")?.outcome).isEqualTo(SUCCESS)
+    }
+
+    @Test
+    internal fun `should use release javac argument when current runtime is not the one targeted`(@TempDir tempDir: Path) {
+        """
+            org.gradle.java.home=${testingJdks.getInstallation(VERSION_11).toFile().canonicalPath}
+        """.trimIndent()
+                .dir(tempDir).name("gradle.properties").write()
+
+        """
+            ${applyPlugins()}
+            
+            java {
+               sourceCompatibility = JavaVersion.VERSION_1_8
+               targetCompatibility = JavaVersion.VERSION_1_8
+            }
+            
+            jdk.provider = 'GradlePropertyJdkProvider'
+            
+            ${ensureCurrentJavaVersionIs(VERSION_11)}
+        """.trimIndent()
+                .dir(tempDir).name("build.gradle").write()
+
+        """
+            public class MyClass {
+                public static void main(String... args) {
+                    System.out.println(java.util.List.of("Hello", "World!"));
+                }
+            }
+        """.trimIndent()
+                .dir(tempDir).name("MyClass.java").into(MAIN_JAVA).write()
+
+        // I don't know why the GradleRunner is failing 🤷‍♂️
+        assertThatIllegalStateException().isThrownBy {
+            GradleRunner.create()
+                    .withProjectDir(tempDir.toFile())
+                    .withGradleVersion(gradleVersion)
+                    .withArguments("compileJava")
+                    .withPluginClasspath()
+                    .buildAndFail() }
+                .withMessageContaining("Task :compileJava FAILED")
+                .withMessageContaining("""
+                    src/main/java/MyClass.java:3: error: cannot find symbol
+                            System.out.println(java.util.List.of("Hello", "World!"));
+                                                             ^
+                      symbol:   method of(String,String)
+                      location: interface List
+                    1 error
+                    """.trimIndent())
     }
 
     private fun applyPlugins(): String {

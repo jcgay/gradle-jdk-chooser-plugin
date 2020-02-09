@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
+import java.nio.file.Path
 import java.util.ServiceLoader
 
 
@@ -33,23 +34,25 @@ class JdkChooserPlugin: Plugin<Project> {
     }
 
     private fun configureJavaTest(project: Project, expectedJavaVersion: JavaVersion) {
-        project.tasks.withType(Test::class.java) {
+        project.tasks.withType(Test::class.java) { task ->
             if (JavaVersion.current() != expectedJavaVersion) {
-                val matchingInstallation = getInstallation(project, expectedJavaVersion)
-                project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
-                        JavaVersion.current(), expectedJavaVersion, matchingInstallation)
-                it.executable = "$matchingInstallation/bin/java"
+                getInstallation(project, expectedJavaVersion)?.let {
+                    project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
+                            JavaVersion.current(), expectedJavaVersion, it)
+                    task.executable = "$it/bin/java"
+                }
             }
         }
     }
 
     private fun configureJavaExecution(project: Project, expectedJavaVersion: JavaVersion) {
-        project.tasks.withType(JavaExec::class.java) {
+        project.tasks.withType(JavaExec::class.java) { task ->
             if (JavaVersion.current() != expectedJavaVersion) {
-                val matchingInstallation = getInstallation(project, expectedJavaVersion)
-                project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
-                        JavaVersion.current(), expectedJavaVersion, matchingInstallation)
-                it.executable = "$matchingInstallation/bin/java"
+                getInstallation(project, expectedJavaVersion)?.let {
+                    project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
+                            JavaVersion.current(), expectedJavaVersion, it)
+                    task.executable = "$it/bin/java"
+                }
             }
         }
     }
@@ -59,10 +62,14 @@ class JdkChooserPlugin: Plugin<Project> {
             val expectedJavaVersion = JavaVersion.toVersion(it.targetCompatibility)
             if (JavaVersion.current() != expectedJavaVersion) {
                 val installation = getInstallation(project, expectedJavaVersion)
-                project.logger.debug("{} is not the expected Java version {}. Will fork Java compilation with JDK: {}",
-                        JavaVersion.current(), expectedJavaVersion, installation)
-                it.options.isFork = true
-                it.options.forkOptions.javaHome = project.file(installation)
+                if (installation != null) {
+                    project.logger.debug("{} is not the expected Java version {}. Will fork Java compilation with JDK: {}",
+                            JavaVersion.current(), expectedJavaVersion, installation)
+                    it.options.isFork = true
+                    it.options.forkOptions.javaHome = project.file(installation)
+                } else if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+                    it.options.compilerArgs.addAll(listOf("--release", expectedJavaVersion.majorVersion))
+                }
             }
         }
     }
@@ -80,9 +87,9 @@ class JdkChooserPlugin: Plugin<Project> {
         return JavaVersion.toVersion(expectedJavaVersions.first())
     }
 
-    private fun getInstallation(project: Project, expectedJavaVersion: JavaVersion): String =
+    private fun getInstallation(project: Project, expectedJavaVersion: JavaVersion): Path? =
             jdkProviders.filter(onlyChosenProvider)
                     .map { it.findInstallation(expectedJavaVersion, project) }
-                    .firstOrNull { it != null }.toString()
+                    .firstOrNull { it != null }
 
 }
