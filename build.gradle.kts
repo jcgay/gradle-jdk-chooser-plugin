@@ -103,6 +103,10 @@ tasks {
    check {
       dependsOn(integrationTest)
    }
+
+   publish {
+      dependsOn(publishPlugins)
+   }
 }
 
 publishing {
