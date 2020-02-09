@@ -49,6 +49,8 @@ internal class JdkChooserPluginTest {
                targetCompatibility = JavaVersion.VERSION_11
             }
             
+            jdk.provider = 'GradlePropertyJdkProvider'
+            
             tasks.create("validateCurrentJdk") {
                 if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
                     throw new TaskExecutionException(it, new IllegalStateException("You should run the build with a JDK 8 😇"))
@@ -73,6 +75,7 @@ internal class JdkChooserPluginTest {
                 .withGradleVersion(gradleVersion)
                 .withArguments("compileJava")
                 .withPluginClasspath()
+                .withDebug(true)
                 .build()
 
         assertThat(result.task(":compileJava")?.outcome).isEqualTo(SUCCESS)
@@ -95,6 +98,8 @@ internal class JdkChooserPluginTest {
                sourceCompatibility = JavaVersion.VERSION_1_8
                targetCompatibility = JavaVersion.VERSION_1_8
             }
+            
+            jdk.provider = 'GradlePropertyJdkProvider'
             
             tasks.create("validateCurrentJdk") {
                 if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
@@ -143,6 +148,8 @@ internal class JdkChooserPluginTest {
                sourceCompatibility = JavaVersion.VERSION_11
                targetCompatibility = JavaVersion.VERSION_11
             }
+            
+            jdk.provider = 'GradlePropertyJdkProvider'
             
             tasks.create("validateCurrentJdk") {
                 if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
@@ -205,6 +212,8 @@ internal class JdkChooserPluginTest {
                sourceCompatibility = JavaVersion.VERSION_11
                targetCompatibility = JavaVersion.VERSION_11
             }
+            
+            jdk.provider = 'GradlePropertyJdkProvider'
             
             tasks.create("validateCurrentJdk") {
                 if (JavaVersion.current() != JavaVersion.VERSION_1_8) {

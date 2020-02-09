@@ -11,10 +11,17 @@ import java.util.ServiceLoader
 
 class JdkChooserPlugin: Plugin<Project> {
 
-    val jdkProviders = ServiceLoader.load(JdkProvider::class.java)
+    private val jdkProviders = ServiceLoader.load(JdkProvider::class.java)
+    private var onlyChosenProvider: (JdkProvider) -> Boolean = { true }
 
     override fun apply(project: Project) {
+        val extension = project.extensions.create("jdk", JdkChooserExtension::class.java)
+
         project.afterEvaluate {
+            if (extension.provider != null) {
+                onlyChosenProvider = { it.javaClass.simpleName == extension.provider }
+            }
+
             project.pluginManager.withPlugin("java") {
 
                 project.tasks.withType(JavaCompile::class.java) {
@@ -65,7 +72,8 @@ class JdkChooserPlugin: Plugin<Project> {
     }
 
     private fun getInstallation(project: Project, expectedJavaVersion: JavaVersion): String =
-            jdkProviders.map { it.findInstallation(expectedJavaVersion, project) }
+            jdkProviders.filter(onlyChosenProvider)
+                    .map { it.findInstallation(expectedJavaVersion, project) }
                     .firstOrNull { it != null }.toString()
 
 }
