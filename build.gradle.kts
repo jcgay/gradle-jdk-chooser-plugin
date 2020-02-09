@@ -4,7 +4,16 @@ plugins {
    kotlin("jvm") version "1.3.61"
    `java-gradle-plugin`
    `maven-publish`
+   id("pl.allegro.tech.build.axion-release") version "1.11.0"
 }
+
+scmVersion {
+   with(tag) {
+      prefix = "v"
+      versionSeparator = ""
+   }
+}
+project.version = scmVersion.version
 
 repositories {
 	mavenCentral()
@@ -81,7 +90,6 @@ publishing {
       create<MavenPublication>("maven") {
          group = "fr.jcgay.gradle-jdk-chooser-plugin"
          artifactId = "fr.jcgay.gradle-jdk-chooser-plugin.gradle.plugin"
-         version = "1.0-SNAPSHOT"
          from(components["java"])
       }
    }

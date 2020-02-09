@@ -40,3 +40,19 @@ Example:
 # Build
 
     ./gradlew build
+
+## Versioning
+
+The project version is automatically built from the repository state.
+
+### Current version
+
+    ./gradlew currentVersion
+
+### Set next version
+
+    ./gradlew markNextVersion -Prelease.version=2.0.0
+
+## Release
+
+    ./gradlew release && ./gradlew publish
