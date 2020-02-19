@@ -11,6 +11,7 @@ import org.gradle.api.JavaVersion.VERSION_11
 import org.gradle.api.JavaVersion.VERSION_1_8
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.TaskOutcome.NO_SOURCE
 import org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import org.junit.jupiter.api.Test
@@ -244,16 +245,18 @@ internal class JdkChooserPluginTest {
         """.trimIndent()
                 .dir(tempDir).name("MyClass.java").into(MAIN_JAVA).write()
 
-        // I don't know why the GradleRunner is failing 🤷‍♂️
-        assertThatIllegalStateException().isThrownBy {
-            GradleRunner.create()
-                    .withProjectDir(tempDir.toFile())
-                    .withGradleVersion(gradleVersion)
-                    .withArguments("compileJava")
-                    .withPluginClasspath()
-                    .buildAndFail() }
-                .withMessageContaining("Task :compileJava FAILED")
-                .withMessageContaining("""
+        val gradle = GradleRunner.create()
+                .withProjectDir(tempDir.toFile())
+                .withGradleVersion(gradleVersion)
+                .withArguments("compileJava")
+                .withPluginClasspath()
+
+        if (JavaVersion.current() < VERSION_11) {
+            // I don't know why the GradleRunner is failing 🤷‍♂️
+            // It fails when the build is run by a JDK 8 for example
+            assertThatIllegalStateException().isThrownBy { gradle.buildAndFail() }
+                    .withMessageContaining("Task :compileJava FAILED")
+                    .withMessageContaining("""
                     src/main/java/MyClass.java:3: error: cannot find symbol
                             System.out.println(java.util.List.of("Hello", "World!"));
                                                              ^
@@ -261,6 +264,18 @@ internal class JdkChooserPluginTest {
                       location: interface List
                     1 error
                     """.trimIndent())
+        } else {
+            val result = gradle.buildAndFail()
+            assertThat(result.task(":compileJava")?.outcome).isEqualTo(TaskOutcome.FAILED)
+            assertThat(result.output).contains("""
+                    src/main/java/MyClass.java:3: error: cannot find symbol
+                            System.out.println(java.util.List.of("Hello", "World!"));
+                                                             ^
+                      symbol:   method of(String,String)
+                      location: interface List
+                    1 error
+                    """.trimIndent())
+        }
     }
 
     private fun applyPlugins(): String {
