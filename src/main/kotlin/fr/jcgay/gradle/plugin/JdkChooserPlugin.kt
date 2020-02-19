@@ -36,7 +36,7 @@ class JdkChooserPlugin: Plugin<Project> {
         findExpectedJavaVersion(project)?.let { expectedJavaVersion ->
             if (JavaVersion.current() != expectedJavaVersion) {
                 getInstallation(project, expectedJavaVersion, extension)?.let {
-                    project.logger.debug("{} is not the expected Java version {}. Change executable for: {}",
+                    project.logger.info("{} is not the expected Java version {}. Change executable for: {}",
                             JavaVersion.current(), expectedJavaVersion, it)
                     task.executable = "$it/bin/java"
                 }
@@ -57,11 +57,13 @@ class JdkChooserPlugin: Plugin<Project> {
                 if (JavaVersion.current() != expectedJavaVersion) {
                     val installation = getInstallation(project, expectedJavaVersion, extension)
                     if (installation != null) {
-                        project.logger.debug("{} is not the expected Java version {}. Will fork Java compilation with JDK: {}",
+                        project.logger.info("{} is not the expected Java version {}. Will fork Java compilation with JDK: {}",
                                 JavaVersion.current(), expectedJavaVersion, installation)
                         task.options.isFork = true
                         task.options.forkOptions.javaHome = project.file(installation)
                     } else if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+                        project.logger.info("{} is not the expected Java version {}. Will use the '--release' javac option",
+                                JavaVersion.current(), expectedJavaVersion)
                         task.options.compilerArgs.addAll(listOf("--release", expectedJavaVersion.majorVersion))
                     }
                 }
